@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Exam Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="app" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-blue-600 text-white p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-bold">Exam Portal</h1>
+                <div id="nav-links">
+                    <button id="home-btn" class="px-4 py-2 hover:bg-blue-700 rounded">Home</button>
+                    <button id="login-btn" class="px-4 py-2 hover:bg-blue-700 rounded">Login</button>
+                    <button id="register-btn" class="px-4 py-2 hover:bg-blue-700 rounded">Register</button>
+                    <button id="admin-btn" class="px-4 py-2 hover:bg-blue-700 rounded hidden">Admin</button>
+                    <button id="logout-btn" class="px-4 py-2 hover:bg-blue-700 rounded hidden">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div id="content" class="container mx-auto p-6">
+            <!-- Views will be dynamically loaded here -->
+        </div>
+    </div>
+
+    <script>
+        // Simulated JSON storage using localStorage
+        const initStorage = () => {
+            if (!localStorage.getItem('users')) {
+                localStorage.setItem('users', JSON.stringify([
+                    { id: 1, username: 'admin', password: 'admin123', role: 'admin' }
+                ]));
+            }
+            if (!localStorage.getItem('exams')) {
+                localStorage.setItem('exams', JSON.stringify([
+                    {
+                        id: 1,
+                        title: 'Sample Exam',
+                        duration: 30,
+                        questions: [
+                            { id: 1, text: 'What is 2+2?', options: ['2', '4', '6', '8'], answer: '4' },
+                            { id: 2, text: 'What is the capital of France?', options: ['Paris', 'London', 'Berlin', 'Madrid'], answer: 'Paris' }
+                        ]
+                    }
+                ]));
+            }
+            if (!localStorage.getItem('results')) {
+                localStorage.setItem('results', JSON.stringify([]));
+            }
+        };
+
+        // Utility functions
+        const getUsers = () => JSON.parse(localStorage.getItem('users')) || [];
+        const saveUsers = (users) => localStorage.setItem('users', JSON.stringify(users));
+        const getExams = () => JSON.parse(localStorage.getItem('exams')) || [];
+        const saveExams = (exams) => localStorage.setItem('exams', JSON.stringify(exams));
+        const getResults = () => JSON.parse(localStorage.getItem('results')) || [];
+        const saveResults = (results) => localStorage.setItem('results', JSON.stringify(results));
+
+        let currentUser = null;
+
+        // Views
+        const views = {
+            home: () => `
+                <div class="bg-white p-6 rounded shadow">
+                    <h2 class="text-2xl font-bold mb-4">Welcome to the Exam Portal</h2>
+                    <p class="mb-4">Please login or register to take exams.</p>
+                    ${currentUser ? `
+                        <h3 class="text-xl mb-2">Available Exams</h3>
+                        <div id="exam-list" class="space-y-4">
+                            ${getExams().map(exam => `
+                                <div class="border p-4 rounded">
+                                    <h4 class="font-bold">${exam.title}</h4>
+                                    <p>Duration: ${exam.duration} minutes</p>
+                                    <button onclick="startExam(${exam.id})" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Start Exam</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `,
+            login: () => `
+                <div class="bg-white p-6 rounded shadow max-w-md mx-auto">
+                    <h2 class="text-2xl font-bold mb-4">Login</h2>
+                    <div class="space-y-4">
+                        <input id="login-username" type="text" placeholder="Username" class="w-full p-2 border rounded">
+                        <input id="login-password" type="password" placeholder="Password" class="w-full p-2 border rounded">
+                        <button onclick="handleLogin()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Login</button>
+                        <p id="login-error" class="text-red-500 hidden">Invalid credentials</p>
+                    </div>
+                </div>
+            `,
+            register: () => `
+                <div class="bg-white p-6 rounded shadow max-w-md mx-auto">
+                    <h2 class="text-2xl font-bold mb-4">Register</h2>
+                    <div class="space-y-4">
+                        <input id="reg-username" type="text" placeholder="Username" class="w-full p-2 border rounded">
+                        <input id="reg-password" type="password" placeholder="Password" class="w-full p-2 border rounded">
+                        <button onclick="handleRegister()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Register</button>
+                        <p id="reg-error" class="text-red-500 hidden">Username already exists</p>
+                    </div>
+                </div>
+            `,
+            exam: (examId) => {
+                const exam = getExams().find(e => e.id === examId);
+                return `
+                    <div class="bg-white p-6 rounded shadow">
+                        <h2 class="text-2xl font-bold mb-4">${exam.title}</h2>
+                        <p class="mb-4">Time Left: <span id="timer">${exam.duration}:00</span></p>
+                        <div id="questions" class="space-y-4">
+                            ${exam.questions.map(q => `
+                                <div class="border p-4 rounded">
+                                    <p class="font-bold">${q.text}</p>
+                                    ${q.options.map(opt => `
+                                        <label class="block"><input type="radio" name="q${q.id}" value="${opt}"> ${opt}</label>
+                                    `).join('')}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="submitExam(${exam.id})" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4">Submit Exam</button>
+                    </div>
+                `;
+            },
+            result: (result) => `
+                <div class="bg-white p-6 rounded shadow">
+                    <h2 class="text-2xl font-bold mb-4">Exam Result</h2>
+                    <p>Score: ${result.score}/${result.total}</p>
+                    <p>Percentage: ${(result.score / result.total * 100).toFixed(2)}%</p>
+                    <button onclick="exportResult(${result.examId})" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4">Export Result</button>
+                    <button onclick="navigate('home')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 mt-4">Back to Home</button>
+                </div>
+            `,
+            admin: () => `
+                <div class="bg-white p-6 rounded shadow">
+                    <h2 class="text-2xl font-bold mb-4">Admin Dashboard</h2>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Users</h3>
+                            <div id="user-list" class="space-y-2">
+                                ${getUsers().map(user => `
+                                    <div class="border p-2 rounded">${user.username} (${user.role})</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Create/Edit Exam</h3>
+                            <input id="exam-title" type="text" placeholder="Exam Title" class="w-full p-2 border rounded mb-2">
+                            <input id="exam-duration" type="number" placeholder="Duration (minutes)" class="w-full p-2 border rounded mb-2">
+                            <textarea id="exam-questions" placeholder="Questions (JSON format)" class="w-full p-2 border rounded mb-2"></textarea>
+                            <button onclick="saveExam()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save Exam</button>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Exams</h3>
+                            <div id="admin-exam-list" class="space-y-4">
+                                ${getExams().map(exam => `
+                                    <div class="border p-4 rounded">
+                                        <h4 class="font-bold">${exam.title}</h4>
+                                        <button onclick="editExam(${exam.id})" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">Edit</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // Navigation
+        const navigate = (view, param = null) => {
+            document.getElementById('content').innerHTML = typeof views[view] === 'function' ? views[view](param) : views[view];
+            if (view === 'exam') startTimer(param);
+        };
+
+        // Authentication
+        const handleLogin = () => {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const users = getUsers();
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-error').classList.add('hidden');
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('register-btn').classList.add('hidden');
+                document.getElementById('logout-btn').classList.remove('hidden');
+                if (user.role === 'admin') document.getElementById('admin-btn').classList.remove('hidden');
+                navigate('home');
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        };
+
+        const handleRegister = () => {
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+            const users = getUsers();
+            if (users.find(u => u.username === username)) {
+                document.getElementById('reg-error').classList.remove('hidden');
+                return;
+            }
+            users.push({ id: users.length + 1, username, password, role: 'user' });
+            saveUsers(users);
+            navigate('login');
+        };
+
+        const handleLogout = () => {
+            currentUser = null;
+            document.getElementById('login-btn').classList.remove('hidden');
+            document.getElementById('register-btn').classList.remove('hidden');
+            document.getElementById('logout-btn').classList.add('hidden');
+            document.getElementById('admin-btn').classList.add('hidden');
+            navigate('home');
+        };
+
+        // Exam Functions
+        let timerInterval;
+        const startTimer = (examId) => {
+            const exam = getExams().find(e => e.id === examId);
+            let timeLeft = exam.duration * 60;
+            const timer = document.getElementById('timer');
+            timerInterval = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timer.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                timeLeft--;
+                if (timeLeft < 0) {
+                    clearInterval(timerInterval);
+                    submitExam(examId);
+                }
+            }, 1000);
+        };
+
+        const startExam = (examId) => {
+            navigate('exam', examId);
+        };
+
+        const submitExam = (examId) => {
+            clearInterval(timerInterval);
+            const exam = getExams().find(e => e.id === examId);
+            let score = 0;
+            exam.questions.forEach(q => {
+                const selected = document.querySelector(`input[name="q${q.id}"]:checked`);
+                if (selected && selected.value === q.answer) score++;
+            });
+            const result = {
+                userId: currentUser.id,
+                examId,
+                score,
+                total: exam.questions.length,
+                date: new Date().toISOString()
+            };
+            const results = getResults();
+            results.push(result);
+            saveResults(results);
+            navigate('result', result);
+        };
+
+        const exportResult = (examId) => {
+            const result = getResults().find(r => r.examId === examId && r.userId === currentUser.id);
+            const exam = getExams().find(e => e.id === examId);
+            const data = `Exam: ${exam.title}\nScore: ${result.score}/${result.total}\nPercentage: ${(result.score / result.total * 100).toFixed(2)}%\nDate: ${result.date}`;
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `result_${examId}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // Admin Functions
+        const saveExam = () => {
+            const title = document.getElementById('exam-title').value;
+            const duration = parseInt(document.getElementById('exam-duration').value);
+            const questions = JSON.parse(document.getElementById('exam-questions').value || '[]');
+            const exams = getExams();
+            const examId = exams.length + 1;
+            exams.push({ id: examId, title, duration, questions });
+            saveExams(exams);
+            navigate('admin');
+        };
+
+        const editExam = (examId) => {
+            const exam = getExams().find(e => e.id === examId);
+            document.getElementById('exam-title').value = exam.title;
+            document.getElementById('exam-duration').value = exam.duration;
+            document.getElementById('exam-questions').value = JSON.stringify(exam.questions);
+        };
+
+        // Event Listeners
+        document.getElementById('home-btn').addEventListener('click', () => navigate('home'));
+        document.getElementById('login-btn').addEventListener('click', () => navigate('login'));
+        document.getElementById('register-btn').addEventListener('click', () => navigate('register'));
+        document.getElementById('admin-btn').addEventListener('click', () => navigate('admin'));
+        document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+        // Initialize
+        initStorage();
+        navigate('home');
+    </script>
+</body>
+</html>

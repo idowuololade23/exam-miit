@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Exam Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for enhanced UI */
+        .gradient-bg {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+        }
+        .card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #1e40af;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- Navigation -->
+        <nav class="gradient-bg text-white p-4 shadow-lg">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold tracking-tight">Exam Portal</h1>
+                <div id="nav-links" class="flex space-x-4">
+                    <button id="home-btn" class="px-4 py-2 rounded-lg hover:bg-blue-800 transition">Home</button>
+                    <button id="login-btn" class="px-4 py-2 rounded-lg hover:bg-blue-800 transition">Login</button>
+                    <button id="register-btn" class="px-4 py-2 rounded-lg hover:bg-blue-800 transition">Register</button>
+                    <button id="admin-btn" class="px-4 py-2 rounded-lg hover:bg-blue-800 transition hidden">Admin Dashboard</button>
+                    <button id="logout-btn" class="px-4 py-2 rounded-lg hover:bg-blue-800 transition hidden">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div id="content" class="container mx-auto p-6 flex-grow">
+            <!-- Views will be dynamically loaded here -->
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white text-center p-4">
+            <p>&copy; 2025 Exam Portal. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Simulated JSON storage using localStorage
+        const initStorage = () => {
+            if (!localStorage.getItem('users')) {
+                localStorage.setItem('users', JSON.stringify([
+                    { id: 1, username: 'admin', password: 'admin123', role: 'admin' }
+                ]));
+            }
+            if (!localStorage.getItem('exams')) {
+                localStorage.setItem('exams', JSON.stringify([
+                    {
+                        id: 1,
+                        title: 'Sample Exam',
+                        duration: 30,
+                        questions: [
+                            { id: 1, text: 'What is 2+2?', options: ['2', '4', '6', '8'], answer: '4' },
+                            { id: 2, text: 'What is the capital of France?', options: ['Paris', 'London', 'Berlin', 'Madrid'], answer: 'Paris' }
+                        ]
+                    }
+                ]));
+            }
+            if (!localStorage.getItem('results')) {
+                localStorage.setItem('results', JSON.stringify([]));
+            }
+        };
+
+        // Utility functions
+        const getUsers = () => JSON.parse(localStorage.getItem('users')) || [];
+        const saveUsers = (users) => localStorage.setItem('users', JSON.stringify(users));
+        const getExams = () => JSON.parse(localStorage.getItem('exams')) || [];
+        const saveExams = (exams) => localStorage.setItem('exams', JSON.stringify(exams));
+        const getResults = () => JSON.parse(localStorage.getItem('results')) || [];
+        const saveResults = (results) => localStorage.setItem('results', JSON.stringify(results));
+
+        let currentUser = null;
+
+        // Views
+        const views = {
+            home: () => `
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white p-8 rounded-lg shadow-lg card">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">Welcome to the Exam Portal</h2>
+                        <p class="text-gray-600 mb-6">Login or register to start taking exams.</p>
+                        ${currentUser && currentUser.role !== 'admin' ? `
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4">Available Exams</h3>
+                            <div id="exam-list" class="grid gap-4 md:grid-cols-2">
+                                ${getExams().map(exam => `
+                                    <div class="border border-gray-200 p-6 rounded-lg card">
+                                        <h4 class="text-xl font-bold text-gray-800">${exam.title}</h4>
+                                        <p class="text-gray-600">Duration: ${exam.duration} minutes</p>
+                                        <button onclick="startExam(${exam.id})" class="btn-primary text-white px-4 py-2 rounded-lg mt-4">Start Exam</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : currentUser && currentUser.role === 'admin' ? `
+                            <p class="text-gray-600">Access the admin dashboard to manage exams and view results.</p>
+                            <button onclick="navigate('admin')" class="btn-primary text-white px-4 py-2 rounded-lg mt-4">Go to Admin Dashboard</button>
+                        ` : ''}
+                    </div>
+                </div>
+            `,
+            login: () => `
+                <div class="max-w-md mx-auto">
+                    <div class="bg-white p-8 rounded-lg shadow-lg card">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">Login</h2>
+                        <div class="space-y-4">
+                            <input id="login-username" type="text" placeholder="Username" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input id="login-password" type="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button onclick="handleLogin()" class="btn-primary text-white px-4 py-2 rounded-lg w-full">Login</button>
+                            <p id="login-error" class="text-red-500 text-sm hidden">Invalid credentials</p>
+                            <p class="text-gray-600 text-sm">Don't have an account? <a onclick="navigate('register')" class="text-blue-600 hover:underline cursor-pointer">Register</a></p>
+                        </div>
+                    </div>
+                </div>
+            `,
+            register: () => `
+                <div class="max-w-md mx-auto">
+                    <div class="bg-white p-8 rounded-lg shadow-lg card">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">Register</h2>
+                        <div class="space-y-4">
+                            <input id="reg-username" type="text" placeholder="Username" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input id="reg-password" type="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button onclick="handleRegister()" class="btn-primary text-white px-4 py-2 rounded-lg w-full">Register</button>
+                            <p id="reg-error" class="text-red-500 text-sm hidden">Username already exists</p>
+                            <p class="text-gray-600 text-sm">Already have an account? <a onclick="navigate('login')" class="text-blue-600 hover:underline cursor-pointer">Login</a></p>
+                        </div>
+                    </div>
+                </div>
+            `,
+            exam: (examId) => {
+                const exam = getExams().find(e => e.id === examId);
+                return `
+                    <div class="max-w-3xl mx-auto">
+                        <div class="bg-white p-8 rounded-lg shadow-lg card">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-3xl font-bold text-gray-800">${exam.title}</h2>
+                                <p class="text-gray-600">Time Left: <span id="timer" class="font-semibold">${exam.duration}:00</span></p>
+                            </div>
+                            <div id="questions" class="space-y-6">
+                                ${exam.questions.map(q => `
+                                    <div class="border border-gray-200 p-6 rounded-lg">
+                                        <p class="text-lg font-semibold text-gray-800 mb-4">${q.text}</p>
+                                        ${q.options.map(opt => `
+                                            <label class="block mb-2 text-gray-700">
+                                                <input type="radio" name="q${q.id}" value="${opt}" class="mr-2 accent-blue-600">${opt}
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button onclick="submitExam(${exam.id})" class="btn-primary text-white px-4 py-2 rounded-lg mt-6 w-full">Submit Exam</button>
+                        </div>
+                    </div>
+                `;
+            },
+            result: (result) => `
+                <div class="max-w-md mx-auto">
+                    <div class="bg-white p-8 rounded-lg shadow-lg card">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">Exam Result</h2>
+                        <div class="space-y-4">
+                            <p class="text-gray-700">Score: <span class="font-semibold">${result.score}/${result.total}</span></p>
+                            <p class="text-gray-700">Percentage: <span class="font-semibold">${(result.score / result.total * 100).toFixed(2)}%</span></p>
+                            <p class="text-gray-700">Time Taken: <span class="font-semibold">${result.timeTaken} seconds</span></p>
+                            <button onclick="exportResult(${result.examId})" class="btn-primary text-white px-4 py-2 rounded-lg w-full">Export Result</button>
+                            <button onclick="navigate('home')" class="bg-gray-600 text-white px-4 py-2 rounded-lg w-full hover:bg-gray-700">Back to Home</button>
+                        </div>
+                    </div>
+                </div>
+            `,
+            admin: () => `
+                <div class="max-w-5xl mx-auto">
+                    <div class="bg-white p-8 rounded-lg shadow-lg card">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">Admin Dashboard</h2>
+                        <div class="space-y-8">
+                            <!-- Users Section -->
+                            <div>
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Users</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-100">
+                                                <th class="border p-3 text-left">Username</th>
+                                                <th class="border p-3 text-left">Role</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="user-list">
+                                            ${getUsers().map(user => `
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="border p-3">${user.username}</td>
+                                                    <td class="border p-3">${user.role}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Exam Results Section -->
+                            <div>
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Exam Results</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-100">
+                                                <th class="border p-3 text-left">Username</th>
+                                                <th class="border p-3 text-left">Exam</th>
+                                                <th class="border p-3 text-left">Score</th>
+                                                <th class="border p-3 text-left">Percentage</th>
+                                                <th class="border p-3 text-left">Time Taken</th>
+                                                <th class="border p-3 text-left">Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="result-list">
+                                            ${getResults().map(result => {
+                                                const user = getUsers().find(u => u.id === result.userId);
+                                                const exam = getExams().find(e => e.id === result.examId);
+                                                return `
+                                                    <tr class="hover:bg-gray-50">
+                                                        <td class="border p-3">${user ? user.username : 'Unknown'}</td>
+                                                        <td class="border p-3">${exam ? exam.title : 'Unknown'}</td>
+                                                        <td class="border p-3">${result.score}/${result.total}</td>
+                                                        <td class="border p-3">${(result.score / result.total * 100).toFixed(2)}%</td>
+                                                        <td class="border p-3">${result.timeTaken} seconds</td>
+                                                        <td class="border p-3">${new Date(result.date).toLocaleString()}</td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Create/Edit Exam Section -->
+                            <div>
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Create/Edit Exam</h3>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="space-y-4">
+                                        <input id="exam-title" type="text" placeholder="Exam Title" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <input id="exam-duration" type="number" placeholder="Duration (minutes)" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <textarea id="exam-questions" placeholder='Questions (JSON format, e.g., [{"id": 1, "text": "Question?", "options": ["A", "B", "C", "D"], "answer": "A"}])' class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-40"></textarea>
+                                        <button onclick="saveExam()" class="btn-primary text-white px-4 py-2 rounded-lg w-full">Save Exam</button>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-semibold text-gray-800 mb-2">Existing Exams</h4>
+                                        <div id="admin-exam-list" class="space-y-4">
+                                            ${getExams().map(exam => `
+                                                <div class="border border-gray-200 p-4 rounded-lg flex justify-between items-center">
+                                                    <div>
+                                                        <h5 class="font-bold text-gray-800">${exam.title}</h5>
+                                                        <p class="text-gray-600">Duration: ${exam.duration} minutes</p>
+                                                    </div>
+                                                    <button onclick="editExam(${exam.id})" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700">Edit</button>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // Navigation
+        const navigate = (view, param = null) => {
+            document.getElementById('content').innerHTML = typeof views[view] === 'function' ? views[view](param) : views[view];
+            if (view === 'exam') startTimer(param);
+        };
+
+        // Authentication
+        const handleLogin = () => {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const users = getUsers();
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-error').classList.add('hidden');
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('register-btn').classList.add('hidden');
+                document.getElementById('logout-btn').classList.remove('hidden');
+                if (user.role === 'admin') document.getElementById('admin-btn').classList.remove('hidden');
+                navigate('home');
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        };
+
+        const handleRegister = () => {
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+            const users = getUsers();
+            if (users.find(u => u.username === username)) {
+                document.getElementById('reg-error').classList.remove('hidden');
+                return;
+            }
+            users.push({ id: users.length + 1, username, password, role: 'user' });
+            saveUsers(users);
+            navigate('login');
+        };
+
+        const handleLogout = () => {
+            currentUser = null;
+            document.getElementById('login-btn').classList.remove('hidden');
+            document.getElementById('register-btn').classList.remove('hidden');
+            document.getElementById('logout-btn').classList.add('hidden');
+            document.getElementById('admin-btn').classList.add('hidden');
+            navigate('home');
+        };
+
+        // Exam Functions
+        let timerInterval;
+        let startTime;
+        const startTimer = (examId) => {
+            const exam = getExams().find(e => e.id === examId);
+            let timeLeft = exam.duration * 60;
+            startTime = Date.now();
+            const timer = document.getElementById('timer');
+            timerInterval = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timer.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                timeLeft--;
+                if (timeLeft < 0) {
+                    clearInterval(timerInterval);
+                    submitExam(examId);
+                }
+            }, 1000);
+        };
+
+        const startExam = (examId) => {
+            if (currentUser.role === 'admin') {
+                alert('Admins cannot take exams.');
+                return;
+            }
+            navigate('exam', examId);
+        };
+
+        const submitExam = (examId) => {
+            clearInterval(timerInterval);
+            const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+            const exam = getExams().find(e => e.id === examId);
+            let score = 0;
+            exam.questions.forEach(q => {
+                const selected = document.querySelector(`input[name="q${q.id}"]:checked`);
+                if (selected && selected.value === q.answer) score++;
+            });
+            const result = {
+                userId: currentUser.id,
+                examId,
+                score,
+                total: exam.questions.length,
+                timeTaken,
+                date: new Date().toISOString()
+            };
+            const results = getResults();
+            results.push(result);
+            saveResults(results);
+            navigate('result', result);
+        };
+
+        const exportResult = (examId) => {
+            const result = getResults().find(r => r.examId === examId && r.userId === currentUser.id);
+            const exam = getExams().find(e => e.id === examId);
+            const data = `Exam: ${exam.title}\nScore: ${result.score}/${result.total}\nPercentage: ${(result.score / result.total * 100).toFixed(2)}%\nTime Taken: ${result.timeTaken} seconds\nDate: ${result.date}`;
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `result_${examId}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // Admin Functions
+        const saveExam = () => {
+            const title = document.getElementById('exam-title').value;
+            const duration = parseInt(document.getElementById('exam-duration').value);
+            let questions;
+            try {
+                questions = JSON.parse(document.getElementById('exam-questions').value || '[]');
+            } catch (e) {
+                alert('Invalid JSON format for questions.');
+                return;
+            }
+            const exams = getExams();
+            const examId = exams.length + 1;
+            exams.push({ id: examId, title, duration, questions });
+            saveExams(exams);
+            document.getElementById('exam-title').value = '';
+            document.getElementById('exam-duration').value = '';
+            document.getElementById('exam-questions').value = '';
+            navigate('admin');
+        };
+
+        const editExam = (examId) => {
+            const exam = getExams().find(e => e.id === examId);
+            document.getElementById('exam-title').value = exam.title;
+            document.getElementById('exam-duration').value = exam.duration;
+            document.getElementById('exam-questions').value = JSON.stringify(exam.questions, null, 2);
+        };
+
+        // Event Listeners
+        document.getElementById('home-btn').addEventListener('click', () => navigate('home'));
+        document.getElementById('login-btn').addEventListener('click', () => navigate('login'));
+        document.getElementById('register-btn').addEventListener('click', () => navigate('register'));
+        document.getElementById('admin-btn').addEventListener('click', () => navigate('admin'));
+        document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+        // Initialize
+        initStorage();
+        navigate('home');
+    </script>
+</body>
+</html>

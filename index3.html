@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Online Exam Portal (HTML + Tailwind + JS)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white shadow">
+      <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Online Exam Portal</h1>
+        <nav class="space-x-2">
+          <button id="btn-show-register" class="btn px-3 py-1 rounded bg-indigo-600 text-white">Register</button>
+          <button id="btn-show-login" class="btn px-3 py-1 rounded bg-green-600 text-white">Login</button>
+          <button id="btn-take-exam" class="btn px-3 py-1 rounded bg-sky-600 text-white">Take Exam</button>
+          <button id="btn-admin" class="btn px-3 py-1 rounded bg-yellow-500 text-white">Admin</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6 flex-1">
+      <!-- Alerts -->
+      <div id="alert" class="hidden mb-4"></div>
+
+      <!-- Auth Views -->
+      <section id="view-register" class="hidden bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">Register</h2>
+        <form id="form-register" class="space-y-3 max-w-md">
+          <input required id="reg-name" placeholder="Full name" class="w-full p-2 border rounded" />
+          <input required id="reg-email" type="email" placeholder="Email" class="w-full p-2 border rounded" />
+          <input required id="reg-password" type="password" placeholder="Password" class="w-full p-2 border rounded" />
+          <button class="px-4 py-2 bg-indigo-600 text-white rounded">Create account</button>
+        </form>
+      </section>
+
+      <section id="view-login" class="hidden bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">Login</h2>
+        <form id="form-login" class="space-y-3 max-w-md">
+          <input required id="login-email" type="email" placeholder="Email" class="w-full p-2 border rounded" />
+          <input required id="login-password" type="password" placeholder="Password" class="w-full p-2 border rounded" />
+          <button class="px-4 py-2 bg-green-600 text-white rounded">Login</button>
+        </form>
+      </section>
+
+      <!-- Dashboard / Exam List -->
+      <section id="view-exams" class="hidden bg-white p-6 rounded shadow">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold">Available Exams</h2>
+          <div>
+            <button id="btn-export-results" class="px-3 py-1 mr-2 bg-gray-200 rounded">Export All Results</button>
+            <button id="btn-export-users" class="px-3 py-1 mr-2 bg-gray-200 rounded">Export Users</button>
+          </div>
+        </div>
+        <div id="exams-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </section>
+
+      <!-- Exam Taking -->
+      <section id="view-exam-taking" class="hidden bg-white p-6 rounded shadow">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="exam-title" class="text-xl font-semibold">Exam</h2>
+          <div>
+            <span id="timer" class="font-mono text-lg"></span>
+          </div>
+        </div>
+        <div id="questions-container" class="space-y-4"></div>
+        <div class="mt-4">
+          <button id="btn-submit-exam" class="px-4 py-2 bg-emerald-600 text-white rounded">Submit Exam</button>
+        </div>
+      </section>
+
+      <!-- Result View -->
+      <section id="view-result" class="hidden bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-2">Your Result</h2>
+        <div id="result-summary" class="mb-4"></div>
+        <button id="btn-download-result" class="px-3 py-1 bg-indigo-600 text-white rounded">Download Result (JSON)</button>
+      </section>
+
+      <!-- Admin Panel -->
+      <section id="view-admin-login" class="hidden bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">Admin Login</h2>
+        <form id="form-admin-login" class="space-y-3 max-w-md">
+          <input id="admin-password" type="password" placeholder="Admin password" class="w-full p-2 border rounded" />
+          <button class="px-4 py-2 bg-yellow-500 text-white rounded">Enter Admin</button>
+        </form>
+      </section>
+
+      <section id="view-admin" class="hidden bg-white p-6 rounded shadow">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold">Admin Dashboard</h2>
+          <div class="space-x-2">
+            <button id="btn-admin-export-exams" class="px-3 py-1 bg-gray-200 rounded">Export Exams</button>
+            <button id="btn-admin-import-exams" class="px-3 py-1 bg-gray-200 rounded">Import Exams</button>
+            <input id="file-import-exams" type="file" accept="application/json" class="hidden" />
+            <button id="btn-admin-logout" class="px-3 py-1 bg-red-400 text-white rounded">Logout Admin</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="font-semibold mb-2">Users</h3>
+            <div id="admin-users" class="space-y-2 max-h-96 overflow-auto p-2 border rounded"></div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold mb-2">Manage Exams</h3>
+            <div class="mb-2">
+              <button id="btn-new-exam" class="px-3 py-1 bg-indigo-600 text-white rounded">Create New Exam</button>
+            </div>
+            <div id="admin-exams" class="space-y-2 max-h-96 overflow-auto p-2 border rounded"></div>
+          </div>
+        </div>
+
+        <!-- Editor modal -->
+        <div id="exam-editor" class="mt-4 hidden bg-gray-50 p-4 rounded border">
+          <h4 class="font-semibold mb-2" id="editor-mode">Create / Edit Exam</h4>
+          <div class="space-y-2">
+            <input id="editor-title" placeholder="Exam title" class="w-full p-2 border rounded" />
+            <input id="editor-duration" type="number" min="1" placeholder="Duration (minutes)" class="w-1/3 p-2 border rounded" />
+            <div>
+              <h5 class="font-semibold">Questions</h5>
+              <div id="editor-questions" class="space-y-2"></div>
+              <button id="btn-add-question" class="mt-2 px-3 py-1 bg-green-600 text-white rounded">Add Question</button>
+            </div>
+            <div class="pt-2">
+              <button id="btn-save-exam" class="px-3 py-1 bg-indigo-600 text-white rounded">Save Exam</button>
+              <button id="btn-cancel-edit" class="px-3 py-1 bg-gray-200 rounded">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Hidden sample JSON download anchor -->
+      <a id="sample-json-link" class="hidden"></a>
+
+    </main>
+
+    <footer class="bg-white text-center py-4 border-t">
+      <small>Built with HTML + Tailwind + vanilla JS • Data saved via localStorage and downloadable JSON files</small>
+    </footer>
+  </div>
+
+  <script>
+    // ---------- Simple data store using localStorage and file import/export ----------
+    const STORAGE_KEYS = { USERS: 'exam_users_v1', EXAMS: 'exam_exams_v1', RESULTS: 'exam_results_v1', ADMIN_PASS: 'exam_admin_pass_v1' };
+
+    // Default admin password (can be changed in localStorage by admin)
+    if (!localStorage.getItem(STORAGE_KEYS.ADMIN_PASS)) localStorage.setItem(STORAGE_KEYS.ADMIN_PASS, 'admin123');
+
+    // Default sample exams if none exist
+    const SAMPLE_EXAMS = [
+      {
+        id: 'sample-1',
+        title: 'Sample General Knowledge Test',
+        durationMinutes: 10,
+        questions: [
+          { id: 'q1', text: 'What is the capital of France?', options: ['Berlin','Madrid','Paris','Rome'], correctIndex: 2, marks: 1 },
+          { id: 'q2', text: 'What is 5 + 7?', options: ['11','12','13','10'], correctIndex: 1, marks: 1 },
+          { id: 'q3', text: 'HTML stands for?', options: ['HyperText Markup Language','Home Tool Markup Language','Hyperlinks and Text Markup Language','None'], correctIndex: 0, marks: 1 }
+        ]
+      }
+    ];
+
+    function loadData(key, fallback) {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      try { return JSON.parse(raw); } catch(e) { return fallback; }
+    }
+    function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+
+    let users = loadData(STORAGE_KEYS.USERS, []);
+    let exams = loadData(STORAGE_KEYS.EXAMS, SAMPLE_EXAMS);
+    let results = loadData(STORAGE_KEYS.RESULTS, []);
+
+    // ---------- UI helpers ----------
+    const $ = id => document.getElementById(id);
+    function showAlert(msg, type='info'){
+      const el = $('alert');
+      el.className = '';
+      el.classList.add('p-3','rounded','mb-4');
+      if(type==='error') el.classList.add('bg-red-100','text-red-700');
+      else if(type==='success') el.classList.add('bg-green-100','text-green-700');
+      else el.classList.add('bg-blue-100','text-blue-700');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(()=> el.classList.add('hidden'), 4000);
+    }
+
+    function hideAllViews(){
+      ['view-register','view-login','view-exams','view-exam-taking','view-result','view-admin-login','view-admin'].forEach(id=>$(id).classList.add('hidden'));
+    }
+
+    // ---------- Auth: register/login ----------
+    function registerUser(name, email, password){
+      if(users.find(u=>u.email===email)) { showAlert('Email already registered', 'error'); return false; }
+      const user = { id: 'u_'+Date.now(), name, email, password, createdAt: new Date().toISOString() };
+      users.push(user); saveData(STORAGE_KEYS.USERS, users);
+      showAlert('Registration successful', 'success');
+      return true;
+    }
+    function loginUser(email, password){
+      const user = users.find(u=>u.email===email && u.password===password);
+      if(!user){ showAlert('Invalid credentials', 'error'); return null; }
+      sessionStorage.setItem('exam_current_user', JSON.stringify(user));
+      showAlert('Login successful', 'success');
+      return user;
+    }
+    function logoutUser(){ sessionStorage.removeItem('exam_current_user'); }
+    function getCurrentUser(){ const s = sessionStorage.getItem('exam_current_user'); return s?JSON.parse(s):null; }
+
+    // ---------- Exams listing & taking ----------
+    function renderExamsList(){
+      const container = $('exams-list'); container.innerHTML = '';
+      if(exams.length===0) container.innerHTML = '<div class="p-4 border rounded">No exams available</div>';
+      exams.forEach(ex=>{
+        const card = document.createElement('div');
+        card.className = 'p-4 border rounded bg-white';
+        card.innerHTML = `
+          <h3 class="font-semibold">${ex.title}</h3>
+          <p class="text-sm">Duration: ${ex.durationMinutes} minutes • Questions: ${ex.questions.length}</p>
+          <div class="mt-2">
+            <button data-id="${ex.id}" class="btn-start px-3 py-1 bg-sky-600 text-white rounded">Start Exam</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    let currentExam = null; let timerInterval = null; let timeRemainingSec = 0;
+    function startExam(examId){
+      const user = getCurrentUser();
+      if(!user){ showAlert('Please log in to take exams', 'error'); return; }
+      const ex = exams.find(e=>e.id===examId);
+      if(!ex){ showAlert('Exam not found', 'error'); return; }
+      currentExam = JSON.parse(JSON.stringify(ex)); // copy
+      // initialize answers
+      currentExam.questions.forEach(q=> q.answerIndex = null);
+      timeRemainingSec = currentExam.durationMinutes * 60;
+      showExamTaking();
+      startTimer();
+    }
+
+    function showExamTaking(){
+      hideAllViews(); $('view-exam-taking').classList.remove('hidden');
+      $('exam-title').textContent = currentExam.title;
+      renderQuestions();
+    }
+
+    function renderQuestions(){
+      const c = $('questions-container'); c.innerHTML = '';
+      currentExam.questions.forEach((q, qi)=>{
+        const wrap = document.createElement('div'); wrap.className = 'p-3 border rounded';
+        const optionsHtml = q.options.map((opt, oi)=>{
+          return `<label class="flex items-center space-x-2"><input type="radio" name="q_${qi}" data-qi="${qi}" data-oi="${oi}" ${q.answerIndex===oi? 'checked':''} class="answer-radio"/> <span>${opt}</span></label>`;
+        }).join('');
+        wrap.innerHTML = `<div class="font-semibold">${qi+1}. ${q.text}</div><div class="mt-2 space-y-1">${optionsHtml}</div>`;
+        c.appendChild(wrap);
+      });
+    }
+
+    function startTimer(){
+      updateTimerDisplay();
+      if(timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(()=>{
+        timeRemainingSec -= 1;
+        if(timeRemainingSec <= 0){ clearInterval(timerInterval); submitExam(); }
+        updateTimerDisplay();
+      }, 1000);
+    }
+    function updateTimerDisplay(){
+      const mm = Math.floor(timeRemainingSec/60).toString().padStart(2,'0');
+      const ss = (timeRemainingSec%60).toString().padStart(2,'0');
+      $('timer').textContent = `${mm}:${ss}`;
+    }
+
+    function submitExam(){
+      // collect answers
+      const radios = Array.from(document.querySelectorAll('.answer-radio'));
+      radios.forEach(r=>{ if(r.checked){ const qi = parseInt(r.dataset.qi,10); const oi = parseInt(r.dataset.oi,10); currentExam.questions[qi].answerIndex = oi; } });
+      // scoring
+      let total = 0, obtained = 0; currentExam.questions.forEach(q=>{ total += (q.marks||1); if(q.answerIndex===q.correctIndex) obtained += (q.marks||1); });
+      const perc = Math.round((obtained/total)*100);
+      const user = getCurrentUser();
+      const res = { id: 'r_'+Date.now(), userId: user.id, userName: user.name, examId: currentExam.id, examTitle: currentExam.title, totalMarks: total, obtainedMarks: obtained, percentage: perc, answers: currentExam.questions.map(q=>({ id: q.id, text: q.text, selected: q.answerIndex, correct: q.correctIndex })), takenAt: new Date().toISOString() };
+      results.push(res); saveData(STORAGE_KEYS.RESULTS, results);
+      clearInterval(timerInterval);
+      renderResult(res);
+    }
+
+    function renderResult(res){
+      hideAllViews(); $('view-result').classList.remove('hidden');
+      $('result-summary').innerHTML = `
+        <p><strong>Exam:</strong> ${res.examTitle}</p>
+        <p><strong>User:</strong> ${res.userName}</p>
+        <p><strong>Score:</strong> ${res.obtainedMarks} / ${res.totalMarks} (${res.percentage}%)</p>
+        <div class="mt-2"><details class="p-2 border rounded"><summary>Answers breakdown</summary>
+          <div class="mt-2">${res.answers.map(a=>`<div class=\"mb-2\"><div class=\"font-semibold\">${a.text}</div><div>Selected: ${a.selected===null? 'No answer': currentExam && currentExam.questions.find(q=>q.id===a.id)?.options[a.selected] || '—'}</div><div>Correct: ${currentExam && currentExam.questions.find(q=>q.id===a.id)?.options[a.correct] || '—'}</div></div>`).join('')}</div>
+        </details></div>
+      `;
+      // attach download
+      $('btn-download-result').onclick = ()=>downloadJson(res, `result_${res.id}.json`);
+    }
+
+    function downloadJson(obj, filename){
+      const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // ---------- Admin functions ----------
+    function adminLogin(pass){
+      const stored = localStorage.getItem(STORAGE_KEYS.ADMIN_PASS);
+      if(pass===stored) { sessionStorage.setItem('exam_admin', '1'); return true; }
+      return false;
+    }
+    function adminLogout(){ sessionStorage.removeItem('exam_admin'); }
+    function isAdmin(){ return sessionStorage.getItem('exam_admin') === '1'; }
+
+    function renderAdminUsers(){
+      const container = $('admin-users'); container.innerHTML = '';
+      if(users.length===0) container.textContent = 'No users registered';
+      users.forEach(u=>{
+        const div = document.createElement('div'); div.className = 'p-2 border rounded';
+        div.innerHTML = `<div class="font-semibold">${u.name}</div><div class="text-sm">${u.email}</div>`;
+        container.appendChild(div);
+      });
+    }
+
+    function renderAdminExams(){
+      const container = $('admin-exams'); container.innerHTML = '';
+      if(exams.length===0) container.textContent = 'No exams';
+      exams.forEach(ex=>{
+        const el = document.createElement('div'); el.className='p-2 border rounded flex items-center justify-between';
+        el.innerHTML = `<div><div class="font-semibold">${ex.title}</div><div class="text-sm">${ex.durationMinutes} min • ${ex.questions.length} q</div></div>
+          <div class="space-x-2">
+            <button data-id="${ex.id}" class="btn-edit px-2 py-1 bg-gray-200 rounded">Edit</button>
+            <button data-id="${ex.id}" class="btn-delete px-2 py-1 bg-red-400 text-white rounded">Delete</button>
+            <button data-id="${ex.id}" class="btn-export-exam px-2 py-1 bg-indigo-600 text-white rounded">Export</button>
+          </div>`;
+        container.appendChild(el);
+      });
+    }
+
+    // Editor helpers
+    let editingExamId = null;
+    function openExamEditor(mode='create', exam=null){
+      $('exam-editor').classList.remove('hidden');
+      $('editor-mode').textContent = mode==='create' ? 'Create Exam' : 'Edit Exam';
+      if(mode==='create'){
+        editingExamId = null; $('editor-title').value = ''; $('editor-duration').value = 10; $('editor-questions').innerHTML = '';
+      } else if(exam){
+        editingExamId = exam.id; $('editor-title').value = exam.title; $('editor-duration').value = exam.durationMinutes; $('editor-questions').innerHTML = '';
+        exam.questions.forEach(q=> addQuestionToEditor(q));
+      }
+    }
+
+    function addQuestionToEditor(pref){
+      const container = $('editor-questions');
+      const qid = pref?.id || 'q_'+Date.now();
+      const wrap = document.createElement('div'); wrap.className = 'p-2 border rounded bg-white';
+      wrap.innerHTML = `
+        <input class="q-text w-full p-2 border rounded" placeholder="Question text" value="${pref?.text?escapeHtml(pref.text):''}" />
+        <div class="mt-2 space-y-1">
+          <input class="opt" placeholder="Option 1" value="${pref?.options?escapeHtml(pref.options[0]||''):''}" />
+          <input class="opt" placeholder="Option 2" value="${pref?.options?escapeHtml(pref.options[1]||''):''}" />
+          <input class="opt" placeholder="Option 3" value="${pref?.options?escapeHtml(pref.options[2]||''):''}" />
+          <input class="opt" placeholder="Option 4" value="${pref?.options?escapeHtml(pref.options[3]||''):''}" />
+        </div>
+        <div class="mt-2 flex items-center space-x-2">
+          <label class="text-sm">Correct option index (0-3)</label>
+          <input class="correct-index w-16 p-1 border rounded" value="${pref?.correctIndex!=null?pref.correctIndex:0}" />
+          <label class="text-sm">Marks</label>
+          <input class="marks w-16 p-1 border rounded" value="${pref?.marks!=null?pref.marks:1}" />
+          <button class="btn-remove-question ml-auto px-2 py-1 bg-red-400 text-white rounded">Remove</button>
+        </div>
+      `;
+      // event for remove
+      wrap.querySelector('.btn-remove-question').addEventListener('click', ()=> wrap.remove());
+      container.appendChild(wrap);
+    }
+
+    function collectExamFromEditor(){
+      const title = $('editor-title').value.trim();
+      const duration = parseInt($('editor-duration').value,10) || 10;
+      const questionNodes = Array.from(document.querySelectorAll('#editor-questions > div'));
+      const questions = questionNodes.map((n, idx)=>{
+        const text = n.querySelector('.q-text').value.trim();
+        const options = Array.from(n.querySelectorAll('.opt')).map(i=>i.value.trim());
+        const correctIndex = parseInt(n.querySelector('.correct-index').value,10) || 0;
+        const marks = parseFloat(n.querySelector('.marks').value) || 1;
+        return { id: 'q_'+Date.now() + '_' + idx, text, options, correctIndex, marks };
+      }).filter(q=>q.text && q.options.length>=2);
+      return { title, durationMinutes: duration, questions };
+    }
+
+    // ---------- Utilities ----------
+    function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\"','&quot;'); }
+
+    // ---------- File import/export ----------
+    function exportAllResults(){ downloadJson(results, 'all_results.json'); }
+    function exportUsers(){ downloadJson(users, 'users.json'); }
+    function exportExams(){ downloadJson(exams, 'exams.json'); }
+
+    function importExamsFromFile(file){
+      const reader = new FileReader();
+      reader.onload = e => {
+        try{
+          const parsed = JSON.parse(e.target.result);
+          if(Array.isArray(parsed)) exams = parsed; else if(parsed.exams) exams = parsed.exams; else throw new Error('Invalid format');
+          saveData(STORAGE_KEYS.EXAMS, exams); renderAdminExams(); renderExamsList(); showAlert('Exams imported', 'success');
+        }catch(err){ showAlert('Import failed: ' + err.message, 'error'); }
+      };
+      reader.readAsText(file);
+    }
+
+    // ---------- Event wiring ----------
+    document.addEventListener('click', (e)=>{
+      if(e.target.matches('#btn-show-register')){ hideAllViews(); $('view-register').classList.remove('hidden'); }
+      if(e.target.matches('#btn-show-login')){ hideAllViews(); $('view-login').classList.remove('hidden'); }
+      if(e.target.matches('#btn-take-exam')){ const user = getCurrentUser(); if(!user){ hideAllViews(); $('view-login').classList.remove('hidden'); showAlert('Please login first', 'info'); } else { hideAllViews(); $('view-exams').classList.remove('hidden'); renderExamsList(); } }
+      if(e.target.matches('#btn-admin')){ hideAllViews(); $('view-admin-login').classList.remove('hidden'); }
+      if(e.target.matches('.btn-start')){ startExam(e.target.dataset.id); }
+      if(e.target.matches('#btn-submit-exam')){ if(confirm('Submit exam now?')) submitExam(); }
+      if(e.target.matches('#btn-download-result')){ /* handled when showing result */ }
+
+      // Admin
+      if(e.target.matches('#btn-admin-export-exams')){ exportExams(); }
+      if(e.target.matches('#btn-admin-import-exams')){ $('file-import-exams').click(); }
+      if(e.target.matches('#btn-admin-logout')){ adminLogout(); hideAllViews(); showAlert('Admin logged out','success'); }
+      if(e.target.matches('#btn-new-exam')){ openExamEditor('create'); }
+      if(e.target.matches('.btn-edit')){ const ex = exams.find(x=>x.id===e.target.dataset.id); openExamEditor('edit', ex); }
+      if(e.target.matches('.btn-delete')){ if(confirm('Delete exam?')){ exams = exams.filter(x=>x.id!==e.target.dataset.id); saveData(STORAGE_KEYS.EXAMS, exams); renderAdminExams(); renderExamsList(); showAlert('Exam deleted','success'); } }
+      if(e.target.matches('.btn-export-exam')){ const ex = exams.find(x=>x.id===e.target.dataset.id); downloadJson(ex, `exam_${ex.id}.json`); }
+      if(e.target.matches('#btn-save-exam')){
+        const collected = collectExamFromEditor();
+        if(!collected.title || collected.questions.length===0){ showAlert('Please provide title and at least 1 question', 'error'); return; }
+        if(editingExamId){ // update
+          const idx = exams.findIndex(x=>x.id===editingExamId);
+          if(idx>=0){ exams[idx].title = collected.title; exams[idx].durationMinutes = collected.durationMinutes; exams[idx].questions = collected.questions; saveData(STORAGE_KEYS.EXAMS, exams); renderAdminExams(); renderExamsList(); showAlert('Exam updated','success'); }
+        } else { const newExam = { id: 'ex_'+Date.now(), title: collected.title, durationMinutes: collected.durationMinutes, questions: collected.questions }; exams.push(newExam); saveData(STORAGE_KEYS.EXAMS, exams); renderAdminExams(); renderExamsList(); showAlert('Exam created','success'); }
+        $('exam-editor').classList.add('hidden');
+      }
+      if(e.target.matches('#btn-cancel-edit')){ $('exam-editor').classList.add('hidden'); }
+      if(e.target.matches('#btn-add-question')){ addQuestionToEditor(); }
+    });
+
+    // Form submits
+    document.getElementById('form-register').addEventListener('submit', (ev)=>{ ev.preventDefault(); const name=$('reg-name').value.trim(); const email=$('reg-email').value.trim(); const pw=$('reg-password').value; if(registerUser(name,email,pw)){ $('reg-name').value=''; $('reg-email').value=''; $('reg-password').value=''; } });
+    document.getElementById('form-login').addEventListener('submit', (ev)=>{ ev.preventDefault(); const email=$('login-email').value.trim(); const pw=$('login-password').value; const u = loginUser(email,pw); if(u){ hideAllViews(); $('view-exams').classList.remove('hidden'); renderExamsList(); } });
+    document.getElementById('form-admin-login').addEventListener('submit', (ev)=>{ ev.preventDefault(); const p=$('admin-password').value; if(adminLogin(p)){ hideAllViews(); $('view-admin').classList.remove('hidden'); renderAdminUsers(); renderAdminExams(); showAlert('Welcome Admin','success'); } else showAlert('Invalid admin password','error'); });
+
+    // file import
+    $('file-import-exams').addEventListener('change', (ev)=>{ if(ev.target.files.length) importExamsFromFile(ev.target.files[0]); ev.target.value = ''; });
+
+    // export global
+    $('btn-export-results').addEventListener('click', ()=>exportAllResults());
+    $('btn-export-users').addEventListener('click', ()=>exportUsers());
+
+    // when taking exam, track changes
+    document.addEventListener('change', (e)=>{
+      if(e.target.classList && e.target.classList.contains('answer-radio')){
+        // handled on submit
+      }
+    });
+
+    // ---------- Sample JSON download link (user requested sample file) ----------
+    const sampleExamsBlob = new Blob([JSON.stringify(SAMPLE_EXAMS, null, 2)], {type:'application/json'});
+    const sampleURL = URL.createObjectURL(sampleExamsBlob);
+    const sampleLink = $('sample-json-link'); sampleLink.href = sampleURL; sampleLink.download = 'sample_exams.json'; sampleLink.textContent = 'Download sample JSON'; sampleLink.classList.remove('hidden');
+
+    // init
+    hideAllViews(); $('view-register').classList.remove('hidden');
+    renderExamsList();
+
+  </script>
+</body>
+</html>

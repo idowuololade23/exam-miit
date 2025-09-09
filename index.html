@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Examination System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow p-4 mb-8 flex justify-between items-center hidden" id="app-header">
+            <h1 class="text-2xl font-bold text-indigo-600">Exam Portal</h1>
+            <div>
+                <span id="user-greeting" class="mr-4 font-medium"></span>
+                <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Login / Register View -->
+        <main id="login-view" class="view active bg-white p-8 rounded-lg shadow-lg max-w-md mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-2">Welcome Back</h2>
+            <p class="text-center text-gray-500 mb-8">Please login to continue</p>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-700 font-medium mb-2">Username</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 font-medium mb-2">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">
+                    Login
+                </button>
+                 <p class="text-center text-sm text-gray-600 mt-4">
+                    Login as <a href="#" id="login-as-admin" class="font-medium text-indigo-600 hover:text-indigo-500">Admin</a> or <a href="#" id="login-as-candidate" class="font-medium text-indigo-600 hover:text-indigo-500">Candidate</a>
+                </p>
+            </form>
+        </main>
+
+        <!-- Admin Dashboard View -->
+        <main id="admin-dashboard-view" class="view">
+            <h2 class="text-3xl font-bold mb-6">Admin Dashboard</h2>
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-semibold mb-4">Manage Exams</h3>
+                <div id="exam-list-admin" class="space-y-3 mb-6">
+                    <!-- JS will populate this -->
+                </div>
+                <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    + Create New Exam
+                </button>
+            </div>
+        </main>
+
+        <!-- Candidate Dashboard View -->
+        <main id="candidate-dashboard-view" class="view">
+            <h2 class="text-3xl font-bold mb-6">Candidate Dashboard</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Available Exams</h3>
+                    <div id="exam-list-candidate" class="space-y-4">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Past Results</h3>
+                    <div id="results-list-candidate" class="space-y-2 text-gray-600">
+                        <p>No results yet.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Exam Taking View -->
+        <main id="exam-view" class="view bg-white p-8 rounded-lg shadow-lg">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 id="exam-title" class="text-2xl font-bold"></h2>
+                <div id="exam-timer" class="text-xl font-semibold bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg">10:00</div>
+            </div>
+            <div id="question-container">
+                <p id="question-progress" class="text-sm text-gray-500 mb-2"></p>
+                <h3 id="question-text" class="text-xl font-medium mb-6"></h3>
+                <div id="choices-container" class="space-y-3">
+                    <!-- JS will populate choices -->
+                </div>
+            </div>
+            <div class="mt-8 flex justify-between">
+                <button id="prev-question-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg transition duration-300">Previous</button>
+                <button id="next-question-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">Next</button>
+                <button id="submit-exam-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">Submit Exam</button>
+            </div>
+        </main>
+
+        <!-- Results View -->
+        <main id="results-view" class="view bg-white p-8 rounded-lg shadow-lg text-center max-w-lg mx-auto">
+            <h2 class="text-3xl font-bold text-green-600 mb-4">Exam Submitted!</h2>
+            <p class="text-gray-600 mb-6">You have successfully completed the exam.</p>
+            <div class="bg-gray-100 p-6 rounded-lg mb-8">
+                <p class="text-lg font-medium text-gray-700">Your Score:</p>
+                <p id="final-score" class="text-5xl font-bold text-indigo-600"></p>
+            </div>
+            <button id="back-to-dashboard-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                Back to Dashboard
+            </button>
+        </main>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- MOCK DATA ---
+            const mockData = {
+                exams: [
+                    { id: 1, title: 'Basic JavaScript Quiz', duration: 10, questionCount: 3 },
+                    { id: 2, title: 'Web Development Fundamentals', duration: 15, questionCount: 5 },
+                    { id: 3, title: 'Advanced CSS Concepts', duration: 20, questionCount: 4 },
+                ],
+                questions: {
+                    1: [
+                        { id: 101, text: 'What keyword is used to declare a variable in JavaScript?', choices: [{id: 1, text: 'var'}, {id: 2, text: 'let'}, {id: 3, text: 'const'}, {id: 4, text: 'All of the above'}], answer: 4 },
+                        { id: 102, text: 'Which company developed JavaScript?', choices: [{id: 5, text: 'Netscape'}, {id: 6, text: 'Microsoft'}, {id: 7, text: 'Sun Microsystems'}, {id: 8, text: 'Oracle'}], answer: 5 },
+                        { id: 103, text: 'What is `console.log()` used for?', choices: [{id: 9, text: 'Displaying errors'}, {id: 10, text: 'Debugging'}, {id: 11, text: 'Printing output to the console'}, {id: 12, text: 'Both B and C'}], answer: 12 },
+                    ],
+                    // Add more questions for other exams if needed
+                },
+                users: {
+                    admin: { username: 'admin', role: 'Admin' },
+                    candidate: { username: 'candidate', role: 'Candidate' }
+                }
+            };
+            
+            // --- STATE MANAGEMENT ---
+            let state = {
+                currentUser: null, // { username, role }
+                currentView: 'login-view',
+                activeExam: {
+                    id: null,
+                    questions: [],
+                    answers: {}, // { questionId: choiceId }
+                    currentQuestionIndex: 0,
+                    timerInterval: null,
+                },
+            };
+
+            // --- DOM SELECTORS ---
+            const views = document.querySelectorAll('.view');
+            const appHeader = document.getElementById('app-header');
+            const loginForm = document.getElementById('login-form');
+            const loginAsAdminBtn = document.getElementById('login-as-admin');
+            const loginAsCandidateBtn = document.getElementById('login-as-candidate');
+            const logoutBtn = document.getElementById('logout-btn');
+            const userGreeting = document.getElementById('user-greeting');
+            const examListAdmin = document.getElementById('exam-list-admin');
+            const examListCandidate = document.getElementById('exam-list-candidate');
+            
+            // Exam view elements
+            const examTitle = document.getElementById('exam-title');
+            const examTimer = document.getElementById('exam-timer');
+            const questionProgress = document.getElementById('question-progress');
+            const questionText = document.getElementById('question-text');
+            const choicesContainer = document.getElementById('choices-container');
+            const prevQuestionBtn = document.getElementById('prev-question-btn');
+            const nextQuestionBtn = document.getElementById('next-question-btn');
+            const submitExamBtn = document.getElementById('submit-exam-btn');
+            
+            // Results view elements
+            const finalScore = document.getElementById('final-score');
+            const backToDashboardBtn = document.getElementById('back-to-dashboard-btn');
+
+            // --- RENDER FUNCTIONS ---
+            function render() {
+                views.forEach(view => {
+                    if (view.id === state.currentView) {
+                        view.classList.add('active');
+                    } else {
+                        view.classList.remove('active');
+                    }
+                });
+
+                if (state.currentUser) {
+                    appHeader.classList.remove('hidden');
+                    userGreeting.textContent = `Hello, ${state.currentUser.username}`;
+                } else {
+                    appHeader.classList.add('hidden');
+                }
+            }
+
+            function populateAdminDashboard() {
+                examListAdmin.innerHTML = '';
+                mockData.exams.forEach(exam => {
+                    const examEl = document.createElement('div');
+                    examEl.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg border';
+                    examEl.innerHTML = `
+                        <div>
+                            <p class="font-semibold">${exam.title}</p>
+                            <p class="text-sm text-gray-500">${exam.questionCount} Questions, ${exam.duration} mins</p>
+                        </div>
+                        <div>
+                            <button class="text-blue-500 hover:text-blue-700 mr-2">Edit</button>
+                            <button class="text-red-500 hover:text-red-700">Delete</button>
+                        </div>
+                    `;
+                    examListAdmin.appendChild(examEl);
+                });
+            }
+
+            function populateCandidateDashboard() {
+                examListCandidate.innerHTML = '';
+                mockData.exams.forEach(exam => {
+                    const examEl = document.createElement('div');
+                    examEl.className = 'p-4 border rounded-lg hover:shadow-md transition-shadow';
+                    examEl.innerHTML = `
+                        <h4 class="font-semibold text-lg">${exam.title}</h4>
+                        <p class="text-sm text-gray-500 mb-3">${exam.questionCount} Questions, ${exam.duration} mins</p>
+                        <button data-exam-id="${exam.id}" class="start-exam-btn w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                            Start Exam
+                        </button>
+                    `;
+                    examListCandidate.appendChild(examEl);
+                });
+            }
+            
+            function renderQuestion() {
+                const exam = state.activeExam;
+                const question = exam.questions[exam.currentQuestionIndex];
+                
+                questionProgress.textContent = `Question ${exam.currentQuestionIndex + 1} of ${exam.questions.length}`;
+                questionText.textContent = question.text;
+                choicesContainer.innerHTML = '';
+
+                question.choices.forEach(choice => {
+                    const choiceEl = document.createElement('label');
+                    choiceEl.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-indigo-50';
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = `question-${question.id}`;
+                    radio.value = choice.id;
+                    radio.className = 'mr-3 h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300';
+                    if (exam.answers[question.id] === choice.id) {
+                        radio.checked = true;
+                    }
+                    choiceEl.appendChild(radio);
+                    choiceEl.append(choice.text);
+                    choicesContainer.appendChild(choiceEl);
+                });
+
+                // Update button visibility
+                prevQuestionBtn.classList.toggle('invisible', exam.currentQuestionIndex === 0);
+                nextQuestionBtn.classList.toggle('hidden', exam.currentQuestionIndex === exam.questions.length - 1);
+                submitExamBtn.classList.toggle('hidden', exam.currentQuestionIndex !== exam.questions.length - 1);
+            }
+
+            // --- EVENT HANDLERS ---
+            function handleLogin(role) {
+                const usernameInput = document.getElementById('username');
+                const user = mockData.users[usernameInput.value.toLowerCase()];
+                if (user && user.role === role) {
+                    state.currentUser = user;
+                    if (role === 'Admin') {
+                        state.currentView = 'admin-dashboard-view';
+                        populateAdminDashboard();
+                    } else {
+                        state.currentView = 'candidate-dashboard-view';
+                        populateCandidateDashboard();
+                    }
+                } else if (usernameInput.value) {
+                     // Auto-create user for demo purposes if it doesn't exist
+                    state.currentUser = { username: usernameInput.value, role };
+                    if (role === 'Admin') {
+                        state.currentView = 'admin-dashboard-view';
+                        populateAdminDashboard();
+                    } else {
+                        state.currentView = 'candidate-dashboard-view';
+                        populateCandidateDashboard();
+                    }
+                } else {
+                     alert('Please enter a username.');
+                }
+                render();
+            }
+
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                // Default to candidate login on form submit
+                handleLogin('Candidate');
+            });
+            
+            loginAsAdminBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('username').value = 'admin';
+                handleLogin('Admin');
+            });
+
+            loginAsCandidateBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('username').value = 'candidate';
+                handleLogin('Candidate');
+            });
+
+
+            logoutBtn.addEventListener('click', () => {
+                state.currentUser = null;
+                state.currentView = 'login-view';
+                render();
+            });
+
+            examListCandidate.addEventListener('click', (e) => {
+                if (e.target.classList.contains('start-exam-btn')) {
+                    const examId = parseInt(e.target.dataset.examId);
+                    startExam(examId);
+                }
+            });
+
+            function startExam(examId) {
+                const examData = mockData.exams.find(e => e.id === examId);
+                state.activeExam = {
+                    id: examId,
+                    questions: mockData.questions[examId] || [],
+                    answers: {},
+                    currentQuestionIndex: 0,
+                    timerInterval: null
+                };
+                
+                if (state.activeExam.questions.length === 0) {
+                    alert("This exam has no questions yet!");
+                    return;
+                }
+                
+                examTitle.textContent = examData.title;
+                state.currentView = 'exam-view';
+                render();
+                renderQuestion();
+                startTimer(examData.duration);
+            }
+            
+            function startTimer(durationMinutes) {
+                let timeLeft = durationMinutes * 60;
+                if (state.activeExam.timerInterval) {
+                    clearInterval(state.activeExam.timerInterval);
+                }
+                state.activeExam.timerInterval = setInterval(() => {
+                    timeLeft--;
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    examTimer.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                    if (timeLeft <= 0) {
+                        clearInterval(state.activeExam.timerInterval);
+                        submitExam();
+                    }
+                }, 1000);
+            }
+
+            choicesContainer.addEventListener('change', (e) => {
+                if (e.target.type === 'radio') {
+                    const currentQuestionId = state.activeExam.questions[state.activeExam.currentQuestionIndex].id;
+                    state.activeExam.answers[currentQuestionId] = parseInt(e.target.value);
+                }
+            });
+
+            nextQuestionBtn.addEventListener('click', () => {
+                if (state.activeExam.currentQuestionIndex < state.activeExam.questions.length - 1) {
+                    state.activeExam.currentQuestionIndex++;
+                    renderQuestion();
+                }
+            });
+
+            prevQuestionBtn.addEventListener('click', () => {
+                if (state.activeExam.currentQuestionIndex > 0) {
+                    state.activeExam.currentQuestionIndex--;
+                    renderQuestion();
+                }
+            });
+            
+            function submitExam() {
+                 if (state.activeExam.timerInterval) clearInterval(state.activeExam.timerInterval);
+
+                let score = 0;
+                const questions = state.activeExam.questions;
+                questions.forEach(q => {
+                    const userAnswerId = state.activeExam.answers[q.id];
+                    if (userAnswerId === q.answer) {
+                        score++;
+                    }
+                });
+
+                const percentage = (score / questions.length) * 100;
+                finalScore.textContent = `${percentage.toFixed(0)}%`;
+
+                state.currentView = 'results-view';
+                render();
+            }
+
+            submitExamBtn.addEventListener('click', submitExam);
+
+            backToDashboardBtn.addEventListener('click', () => {
+                state.currentView = 'candidate-dashboard-view';
+                populateCandidateDashboard(); // Refresh dashboard data
+                render();
+            });
+
+
+            // --- INITIALIZE ---
+            render();
+        });
+    </script>
+
+</body>
+</html>
